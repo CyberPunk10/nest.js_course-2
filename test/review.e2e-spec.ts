@@ -4,6 +4,7 @@ import * as request from 'supertest';
 import { Types, disconnect } from 'mongoose';
 import { AppModule } from '../src/app.module';
 import { CreateReviewDto } from '../src/review/dto/review.dto';
+import { AuthDto } from '../src/auth/dto/auth.dto';
 
 const productId = new Types.ObjectId().toHexString();
 const testDto: CreateReviewDto = {
@@ -14,9 +15,15 @@ const testDto: CreateReviewDto = {
   productId,
 }
 
+const liginDto: AuthDto = {
+  login: 'test21@test.com',
+  password: 'password',
+}
+
 describe('AppController (e2e)', () => {
   let app: INestApplication;
   let createdId: string;
+  let token: string;
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -25,11 +32,18 @@ describe('AppController (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     await app.init();
+
+    const res = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send(liginDto);
+
+    token = res.body.access_token;
   });
 
   it('/review/create (POST) - success', async () => {
     return request(app.getHttpServer())
       .post('/review/create')
+      .set('Authorization', `Bearer ${token}`)
       .send(testDto)
       .expect(201)
       .then(({ body }: request.Response) => {
@@ -41,21 +55,19 @@ describe('AppController (e2e)', () => {
   it('/review/create (POST) - fail', async () => {
     return request(app.getHttpServer())
       .post('/review/create')
+      .set('Authorization', `Bearer ${token}`)
       .send({ ...testDto, rating: null })
       .expect(400)
       .then(({ body }: request.Response) => {
-        console.log('[ body create fail]: ', body);
+        console.log('[ body create fail]: ', body); // пример ошибки, который можно протестировать
       });
   });
 
   it('/review/byProduct/:productId (GET) - success', async () => {
     return request(app.getHttpServer())
-      .get('/review/byProduct/' + createdId)
+      .get('/review/byProduct/' + productId)
       .expect(200)
       .then(({ body }: request.Response) => {
-        // TODO: тест не проходит
-        console.log('[ createdId ]: ', createdId);
-        console.log('[ body ]', body);
         expect(body.length).toBe(1);
       });
   });
@@ -72,12 +84,14 @@ describe('AppController (e2e)', () => {
   it('/review/:id (DELETE) - success', async () => {
     return request(app.getHttpServer())
       .delete('/review/' + createdId)
+      .set('Authorization', `Bearer ${token}`)
       .expect(200);
   });
 
   it('/review/:id (DELETE) - fail (удаляем по несуществующему id)', async () => {
     return request(app.getHttpServer())
       .delete('/review/' + new Types.ObjectId().toHexString())
+      .set('Authorization', `Bearer ${token}`)
       .expect(404, {
         statusCode: 404,
         message: 'Not found',

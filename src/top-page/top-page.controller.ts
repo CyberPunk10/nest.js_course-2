@@ -9,7 +9,7 @@ export class TopPageController {
 
   @Post('create')
   async create(@Body() dto: Omit<TopPageModel, '_id'>) {
-    // console.log(this.configService.get('TEST'));
+
   }
 
   @Get(':id')
