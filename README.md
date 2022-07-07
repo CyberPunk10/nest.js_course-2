@@ -35,6 +35,11 @@ $ npm install
 ## Running the app
 
 ```bash
+# start mongodb
+$ docker-compose start
+```
+
+```bash
 # development
 $ npm run start
 
